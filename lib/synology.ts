@@ -1,15 +1,24 @@
 import axios from 'axios';
 import https from 'https';
 
-if (!process.env.SYNOLOGY_URL || !process.env.SYNOLOGY_PORT) {
-  throw new Error('SYNOLOGY_URL 또는 SYNOLOGY_PORT 환경 변수가 설정되지 않았습니다.');
+function requireSynologyEnv() {
+  if (!process.env.SYNOLOGY_URL || !process.env.SYNOLOGY_PORT) {
+    throw new Error('SYNOLOGY_URL 또는 SYNOLOGY_PORT 환경 변수가 설정되지 않았습니다.');
+  }
+  if (!process.env.SYNOLOGY_USER || !process.env.SYNOLOGY_PASSWORD) {
+    throw new Error('SYNOLOGY_USER 또는 SYNOLOGY_PASSWORD 환경 변수가 설정되지 않았습니다.');
+  }
 }
 
-const baseURL = `${process.env.SYNOLOGY_URL}:${process.env.SYNOLOGY_PORT}`;
+function getBaseUrl() {
+  requireSynologyEnv();
+  return `${process.env.SYNOLOGY_URL}:${process.env.SYNOLOGY_PORT}`;
+}
 
 // 시놀로지 인증 함수
 async function getSynologySession() {
   try {
+    const baseURL = getBaseUrl();
     const response = await axios.get(`${baseURL}/webapi/auth.cgi`, {
       params: {
         api: 'SYNO.API.Auth',
@@ -20,7 +29,7 @@ async function getSynologySession() {
         session: 'FileStation',
         format: 'sid'
       },
-      httpsAgent: new https.Agent({ rejectUnauthorized: false })
+      httpsAgent: new https.Agent({ rejectUnauthorized: true })
     });
 
     if (!response.data.success) {
@@ -36,14 +45,14 @@ async function getSynologySession() {
 
 // 시놀로지 서버 기본 설정
 const synologyAxios = axios.create({
-  baseURL,
+  baseURL: getBaseUrl(),
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json'
   },
   httpsAgent: new https.Agent({
-    rejectUnauthorized: false
+    rejectUnauthorized: true
   }),
   paramsSerializer: (params) => {
     return Object.entries(params)
@@ -78,6 +87,7 @@ synologyAxios.interceptors.request.use(async (config) => {
 // 파일 다운로드 함수 추가
 async function downloadFile(path: string): Promise<Buffer> {
   const sid = await getSynologySession();
+  const baseURL = getBaseUrl();
   
   const response = await axios.get(`${baseURL}/webapi/entry.cgi`, {
     params: {
@@ -97,7 +107,7 @@ async function downloadFile(path: string): Promise<Buffer> {
       return status >= 200 && status < 400;  // 302도 성공으로 처리
     },
     httpsAgent: new https.Agent({ 
-      rejectUnauthorized: false,
+      rejectUnauthorized: true,
       keepAlive: true
     })
   }).catch(error => {
@@ -112,7 +122,7 @@ async function downloadFile(path: string): Promise<Buffer> {
           'Cookie': `id=${sid}`  // 세션 쿠키 추가
         },
         httpsAgent: new https.Agent({ 
-          rejectUnauthorized: false,
+          rejectUnauthorized: true,
           keepAlive: true
         })
       });
