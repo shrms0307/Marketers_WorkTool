@@ -55,4 +55,4 @@ pnpm dev
 ## 참고
 - 본 저장소는 **프론트엔드/풀스택 영역**을 포함합니다.
 - 백엔드(Application Server) 코드는 별도 서비스로 분리되어 운영되었습니다.
-  ㄴ> https://github.com/shrms0307/Marketers_WorkTool-AppServer.git
+  	https://github.com/shrms0307/Marketers_WorkTool-AppServer.git
